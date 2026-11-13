@@ -84,7 +84,7 @@ public sealed partial class MainWindow
         }
 
         s.Children.Add(actions);
-        _details.Child = new ScrollViewer { Content = s };
+        _details.Child = new ScrollViewer { Content = s, Padding = new Thickness(0, 0, 14, 0) };
     }
 
     /// <summary>Uninstalls each program in turn (quietly when it can), then offers one clean-up page for all their leftovers.</summary>

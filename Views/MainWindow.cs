@@ -362,6 +362,7 @@ public sealed partial class MainWindow : Window
     {
         _busy = true;
         _progress.IsVisible = true;
+        _usage.Clear();
         _status.Text = "Looking for installed programs…";
         var watch = Stopwatch.StartNew();
         var apps = await Task.Run(() =>
@@ -514,13 +515,14 @@ public sealed partial class MainWindow : Window
 
         F("Version", a.Version);
         F("Installed", a.InstallDate?.ToString("d MMMM yyyy"));
-        F("Size", a.SizeText);
+        F("Estimate", a.SizeText.Length > 0 ? a.SizeText + " (its installer's figure)" : null);
         F("Folder", a.InstallLocation, mono: true);
         F("Uninstall", a.Orphaned ? null : (_settings.Quiet && a.Plan.CanQuiet ? a.Plan.QuietCommand : a.Plan.Command), mono: true);
         s.Children.Add(facts);
 
         if (!a.Plan.CanQuiet && a.Plan.WhyNotQuiet is { } why)
             s.Children.Add(new TextBlock { Text = why, Foreground = a.Orphaned ? Bad : Warn, FontSize = 12, TextWrapping = TextWrapping.Wrap });
+        s.Children.Add(UsageBlock(a));
 
         var actions = new StackPanel { Spacing = 8, Margin = new Thickness(0, 6, 0, 0) };
         if (_confirming)
@@ -579,7 +581,7 @@ public sealed partial class MainWindow : Window
 
         actions.Children.Add(more);
         s.Children.Add(actions);
-        _details.Child = new ScrollViewer { Content = s };
+        _details.Child = new ScrollViewer { Content = s, Padding = new Thickness(0, 0, 14, 0) };
     }
 
     private DateTime _restoreAt = DateTime.MinValue;

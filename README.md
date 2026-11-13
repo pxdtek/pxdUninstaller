@@ -9,6 +9,7 @@ Removes programs the normal way or all the way. Pick a program and press **Unins
 ## Features
 
 - **Lists everything installed:** every Apps & features entry (all users, 64-bit and 32-bit, and just-for-you) plus your **Microsoft Store apps**, with icons, sizes and install dates. Windows updates, hidden system components and app frameworks are left out.
+- **On this PC**, for the program you pick: the space it **really takes** (measured: its program folder, its data in AppData and ProgramData, and Windows' traces of it; not the installer's estimate), and its **services and processes running now** with their **CPU and memory**, updated every few seconds.
 - **Uninstall** runs the program's own uninstaller, the normal way. Afterwards it offers to **look for leftovers**.
 - **Uninstall and clean up** shows everything that belongs to the program before anything runs, grouped and with tick boxes:
   - **what the normal uninstall removes is ticked from the start** (its uninstaller, install folder, Apps & features entry, Start menu and desktop shortcuts),
@@ -38,7 +39,7 @@ Removes programs the normal way or all the way. Pick a program and press **Unins
 ```powershell
 pxdu list                          # programs and Store apps (add text to filter, --json for scripts)
 pxdu list --html programs.html     # or --csv programs.csv
-pxdu show "7-Zip"                  # details and how it uninstalls
+pxdu show "7-Zip"                  # details, how it uninstalls, space on disk, what's running
 pxdu which steam                   # which installed program a running program belongs to
 pxdu leftovers "7-Zip" [--all]     # what a deep uninstall would remove; changes nothing
 pxdu remove "7-Zip" "VLC media player"          # quiet uninstall

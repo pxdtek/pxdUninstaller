@@ -185,6 +185,22 @@ public static class Cli
             Row("Installer", a.Plan.Method);
             Row("Uninstall", a.Plan.Command);
             Row("Quiet", a.Plan.QuietCommand ?? "not possible: " + a.Plan.WhyNotQuiet);
+            var finder = new LeftoverFinder(a, apps);
+            var found = finder.Find();
+            var disk = Usage.Disk(found);
+            Row("On disk", disk.Total == 0 ? "nothing measured" : $"{Text.Size(disk.Total)} (program {Text.Size(disk.ProgramBytes)}, its data {Text.Size(disk.DataBytes)}, other {Text.Size(disk.OtherBytes)})");
+            var running = Usage.Running(finder.Dirs, found);
+            if (running.Count == 0)
+            {
+                Row("Running", "nothing");
+            }
+            else
+            {
+                Row("Running", $"{running.Count(r => r.Pid > 0)} process(es), CPU {running.Sum(r => r.CpuPercent):0.0}%, memory {Text.Size(running.Sum(r => r.MemoryBytes))}");
+                foreach (var r in running)
+                    Out.WriteLine($"                {Usage.Describe(r)}" + (r.Pid > 0 ? $"  pid {r.Pid}, CPU {r.CpuPercent:0.0}%, {Text.Size(r.MemoryBytes)}" : ""));
+            }
+
             Out.WriteLine();
         }
 

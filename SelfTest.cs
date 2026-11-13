@@ -340,6 +340,35 @@ internal static class SelfTest
             Check("Only normal-uninstall items start ticked", found.Where(f => f.Selected).All(f => f.Match == MatchLevel.Regular));
             Check("Folder sizes counted", found.First(f => f.Path == install).Size >= 50_000);
 
+            // On this PC: measured space, and what's running from its folder (a real helper process; the service status is faked).
+            var disk = Usage.Disk(found);
+            Check("Disk use: program and data measured, similar-name folders not counted", disk.ProgramBytes >= 50_000 && disk.DataBytes > 0 && !disk.Places.Any(pl => pl.Path.Contains("FakeNotes Helper")),
+                $"program {disk.ProgramBytes}, data {disk.DataBytes}, other {disk.OtherBytes}");
+            var helperExe = Path.Combine(install, "helper.exe");
+            File.Copy(Path.Combine(Environment.SystemDirectory, "PING.EXE"), helperExe);
+            using (var helper = Process.Start(new ProcessStartInfo(helperExe, "-n 30 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true })!)
+            {
+                var oldStatus = Usage.ServiceStatus;
+                Usage.ServiceStatus = name => name == "FakeNotesSvc" ? ("RUNNING", helper.Id) : null;
+                try
+                {
+                    await Task.Delay(300);
+                    var running = Usage.Running(new LeftoverFinder(fake, apps).Dirs, found, 400);
+                    var h = running.FirstOrDefault(r => r.Pid == helper.Id);
+                    Check("Running now: its process with memory, tied to its service", h is { MemoryBytes: > 0, ServiceName: "FakeNotesSvc", ServiceState: "RUNNING" } && h.Name == "helper.exe" && running.Count == 1,
+                        string.Join("; ", running.Select(r => $"{Usage.Describe(r)} pid {r.Pid} cpu {r.CpuPercent:0.0}% mem {r.MemoryBytes}")));
+                }
+                finally
+                {
+                    Usage.ServiceStatus = oldStatus;
+                    try { helper.Kill(); } catch { }
+                    helper.WaitForExit(5000);
+                }
+            }
+
+            File.Delete(helperExe);
+            Check("Running now: nothing once it stopped", Usage.Running(new LeftoverFinder(fake, apps).Dirs, [], 100).Count == 0);
+
             // Remove: the uninstaller quietly, plus everything that belongs to it (not the similar-name ones).
             foreach (var f in found) f.Selected = f.Match <= MatchLevel.Strong;
             var log = new List<string>();
@@ -548,6 +577,18 @@ internal static class SelfTest
     {
         R.AppendLine("== Window ==");
         var apps = SampleApps();
+        // Made-up "On this PC" figures for the screenshots: nothing here is measured on this PC.
+        MainWindow.FakeUsage = a => a.Name switch
+        {
+            "OBS Studio" => (new DiskUse(545_000_000, 38_400_000, 2_300_000,
+                [(@"C:\Program Files\obs-studio", 545_000_000, "Program files"), (@"C:\Users\alex\AppData\Roaming\obs-studio", 38_400_000, "App data"), (@"C:\Windows\Prefetch\OBS64.EXE-5A9C2B11.pf", 61_000, "Windows traces")]),
+                [new RunningItem("obs64.exe", 14320, @"C:\Program Files\obs-studio\bin\64bit\obs64.exe", 6.4, 412_000_000, null, null),
+                 new RunningItem("obs-browser-page.exe", 15012, @"C:\Program Files\obs-studio\obs-plugins\64bit\obs-browser-page.exe", 0.8, 96_000_000, null, null)]),
+            "Visualizer Pro" => (new DiskUse(2_150_000_000, 310_000_000, 0, [(@"C:\Program Files\Visualizer Pro", 2_150_000_000, "Program files"), (@"C:\ProgramData\Visualizer Pro", 310_000_000, "App data")]),
+                [new RunningItem("VisualizerSvc.exe", 3120, @"C:\Program Files\Visualizer Pro\VisualizerSvc.exe", 0.2, 58_000_000, "VisualizerLicense", "RUNNING"),
+                 new RunningItem("VisualizerUpdate", 0, "", 0, 0, "VisualizerUpdate", "STOPPED")]),
+            _ => (new DiskUse(a.SizeBytes, 0, 0, []), []),
+        };
         var w = OffScreen(apps);
         w.Show();
         await Task.Delay(100);
@@ -561,11 +602,15 @@ internal static class SelfTest
         w.ShowGroup(0);
         var obs = apps.First(a => a.Name == "OBS Studio");
         w.Select(obs);
+        await w.MeasureAsync(obs);
         await Task.Delay(50);
         Check("Selecting shows details", w.Selected == obs);
+        Check("On this PC shows disk use and what's running", w.MeasuredDisk(obs)?.Total == 585_700_000 && w.RunningOf(obs)?.Count == 2);
         Shot(w, "programs.png");
 
-        w.Select(apps.First(a => a.Name == "Visualizer Pro"));
+        var vis = apps.First(a => a.Name == "Visualizer Pro");
+        w.Select(vis);
+        await w.MeasureAsync(vis);
         await Task.Delay(50);
         Shot(w, "no-quiet.png");
 
@@ -607,6 +652,7 @@ internal static class SelfTest
         Check("Real open windows listed without errors", Hunter.Windows() is { } real && real.All(r => r.ExePath.Length > 0), $"{Hunter.Windows().Count} windows");
         w.CloseCleanup();
         w.Close();
+        MainWindow.FakeUsage = null;
         R.AppendLine();
     }
 

@@ -61,7 +61,7 @@ Other options for `remove` and `forced`: `--restore-point` (make one first), `--
 
 - **With [pxd Toolkit](https://github.com/pxdtek/pxdToolkit)** (recommended): pick pxd Uninstaller and press Install. The Toolkit keeps it up to date.
 - **With winget:** `winget install pxdtek.Uninstaller`
-- **By hand:** download `pxdUninstaller-<version>-win-x64.zip` from [Releases](https://github.com/pxdtek/pxdUninstaller/releases), unzip it anywhere and run `pxdUninstaller.exe`. It needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+- **By hand:** download `pxdUninstaller-<version>-win-x64.zip` from [Releases](https://github.com/pxdtek/pxdUninstaller/releases), unzip it anywhere and run `pxdUninstaller.exe`. It needs the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 The app asks for administrator rights when it opens (most uninstallers need them). Say no and it still runs, but can only remove programs installed just for you. Each time it starts, it checks for a newer release (at pxdtek.com, or GitHub when pxdtek.com can't be reached) and installs it into its own folder before opening; it just opens when offline. Set `PXD_NO_UPDATE=1` to turn that off.
 

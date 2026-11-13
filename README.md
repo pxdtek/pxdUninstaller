@@ -50,6 +50,14 @@ pxdu forced "Old Tool" --folder "C:\Program Files\Old Tool"   # leftovers of a p
 
 Other options for `remove` and `forced`: `--restore-point` (make one first), `--permanent` (delete files instead of using the Recycle Bin). A program is a name, a unique part of one, or an id from `list --json`. Programs installed for all users need an elevated prompt (exit code 5). Exit codes: 0 done, 2 not found or ambiguous, 3 can't be removed quietly, 4 something couldn't be removed, 5 administrator rights needed.
 
+## PowerShell edition (nothing to install)
+
+```powershell
+irm pxdtek.com/u | iex
+```
+
+A console version in [cli/pxdUninstaller.ps1](cli/pxdUninstaller.ps1) that runs in memory on any PC. It's also in the pxd Toolkit console (`irm pxdtek.com/tk | iex`). It lists programs and Store apps, uninstalls them with their own uninstaller (or quietly, when the installer type allows it), then shows the leftovers to tick and remove: folders, shortcuts, registry keys, startup entries, services and scheduled tasks. Files go to the Recycle Bin. Registry keys, services and tasks are removed for good, after a warning; this edition keeps no backups. `-List [-Filter text]` prints the list and exits.
+
 ## Supported systems
 
 | System | Status | Notes |

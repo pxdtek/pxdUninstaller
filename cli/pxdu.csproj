@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- pxdu.exe: the console command line of pxd Uninstaller (same Core\ code, no window). Shipped next to pxdUninstaller.exe. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>pxdUninstaller</RootNamespace>
+    <AssemblyName>pxdu</AssemblyName>
+    <Version>1.0.0</Version>
+    <Product>pxd Uninstaller (command line)</Product>
+    <ApplicationIcon Condition="Exists('..\Assets\pxdUninstaller.ico')">..\Assets\pxdUninstaller.ico</ApplicationIcon>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Core\**\*.cs" Link="Core\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

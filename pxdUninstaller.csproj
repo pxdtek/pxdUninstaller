@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>pxdUninstaller</RootNamespace>
+    <AssemblyName>pxdUninstaller</AssemblyName>
+    <Version>1.0.0</Version>
+    <Product>pxd Uninstaller</Product>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Rendered by the app's write-icon option (see README); a fresh clone builds without it. -->
+    <ApplicationIcon Condition="Exists('Assets\pxdUninstaller.ico')">Assets\pxdUninstaller.ico</ApplicationIcon>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>false</TieredPGO>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The command-line tool (cli\pxdu.csproj) is its own console project that shares Core\. -->
+    <Compile Remove="cli\**" />
+    <None Remove="cli\**" />
+    <EmbeddedResource Remove="cli\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <!-- Only for the self-test: renders the window without creating one on the screen. -->
+    <PackageReference Include="Avalonia.Headless" Version="12.1.4" />
+  </ItemGroup>
+
+  <Target Name="TrimPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_PruneFiles Include="$(PublishDir)*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(_PruneFiles)" />
+  </Target>
+
+</Project>

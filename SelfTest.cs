@@ -81,6 +81,12 @@ internal static class SelfTest
         Check("Packed product code", LeftoverFinder.Packed("{12345678-ABCD-EF01-2345-6789ABCDEF01}") == "87654321DCBA10FE32547698BADCFE10", LeftoverFinder.Packed("{12345678-ABCD-EF01-2345-6789ABCDEF01}"));
         var tasks = LeftoverFinder.ParseTasks("<?xml version=\"1.0\" encoding=\"UTF-16\"?>\r\n<Tasks>\r\n<!-- \\A\\One -->\r\n<Task xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit-task\"><Actions><Exec><Command>\"C:\\x\\a.exe\"</Command></Exec></Actions></Task>\r\n<!-- \\Two -->\r\n<Task xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit-task\"><Actions><Exec><Command>%windir%\\b.exe</Command></Exec></Actions></Task>\r\n</Tasks>");
         Check("Scheduled task list", tasks.Count == 2 && tasks[0].Name == @"\A\One" && tasks[0].Commands[0] == @"C:\x\a.exe" && tasks[1].Commands[0].StartsWith(win, StringComparison.OrdinalIgnoreCase), string.Join("; ", tasks.Select(t => t.Name + "=" + string.Join(",", t.Commands))));
+        var shellDir = Path.Combine(Dir!, "shell-delete");
+        Directory.CreateDirectory(Path.Combine(shellDir, "sub"));
+        File.WriteAllText(Path.Combine(shellDir, "sub", "a.txt"), "x");
+        File.WriteAllText(Path.Combine(Dir!, "shell-delete.txt"), "x");
+        Check("Shell delete (the Recycle Bin's call) works for a folder and a file",
+            Native.ShellDelete(shellDir, toRecycleBin: false) && !Directory.Exists(shellDir) && Native.ShellDelete(Path.Combine(Dir!, "shell-delete.txt"), toRecycleBin: false));
         var p = Places.Real();
         Check("System folders are protected", p.IsProtected(p.ProgramFiles) && p.IsProtected(p.AppData) && p.IsProtected(Path.Combine(win, "System32")) && p.IsProtected(@"C:\") && p.IsProtected(p.UserProfile)
                                               && p.IsProtected(Path.GetDirectoryName(p.UserProfile)!) && !p.IsProtected(Path.Combine(p.ProgramFiles, "Some App")));
@@ -352,7 +358,8 @@ internal static class SelfTest
             var reg = report.BackupFolder is { } bdir ? Path.Combine(bdir, "registry.reg") : "";
             var regText = File.Exists(reg) ? await File.ReadAllTextAsync(reg) : "";
             Check("Registry backed up first (.reg)", regText.StartsWith("Windows Registry Editor Version 5.00") && regText.Contains("Fake Notes") && regText.Contains("FakeNotesTray") && regText.Contains("\"Theme\"=\"dark\""), reg);
-            Check("Backup lists what was removed", report.BackupFolder is { } b2 && File.ReadAllText(Path.Combine(b2, "removed.txt")).Contains("FakeNotesSvc"));
+            Check("Backup lists what was removed", report.BackupFolder is { } b2 && File.ReadAllText(Path.Combine(b2, "removed.txt")).Contains("FakeNotesSvc") && !File.Exists(Path.Combine(b2, "removing.txt")));
+            Check("Folders went through the shell delete", report.Steps.Any(s => s.Item.Kind == LeftoverKind.Folder && s.Outcome == StepOutcome.Removed) && log.Any(l => l.Contains("Removed") && l.Contains("AppData")));
 
             // Restoring the .reg puts a removed key back (regedit's format is right).
             var restore = Runner.Tool("reg.exe", $"import \"{reg}\"", 30_000);

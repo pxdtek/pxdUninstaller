@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>pxdUninstaller</RootNamespace>
     <AssemblyName>pxdu</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Product>pxd Uninstaller (command line)</Product>
     <ApplicationIcon Condition="Exists('..\Assets\pxdUninstaller.ico')">..\Assets\pxdUninstaller.ico</ApplicationIcon>
     <InvariantGlobalization>true</InvariantGlobalization>

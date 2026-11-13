@@ -254,7 +254,8 @@ public sealed class UninstallJob
     private static StepResult Done(Leftover l) => new(l, StepOutcome.Removed, "");
     private static StepResult Fail(Leftover l, string why) => new(l, StepOutcome.Failed, why);
 
-    private bool Recycle(string path) => !Permanent && !Places.Current.Test && Native.Recycle(path);
+    // The self-test goes through the same shell call, without the Recycle Bin, so the call itself is always tested.
+    private bool Recycle(string path) => Places.Current.Test ? Native.ShellDelete(path, toRecycleBin: false) : !Permanent && Native.Recycle(path);
 
     private StepResult DeleteFile(Leftover l)
     {
@@ -360,7 +361,29 @@ public sealed class UninstallJob
 
     private readonly StringBuilder _notes = new();
 
-    private void Note(string s) => _notes.AppendLine(s);
+    private void Note(string s)
+    {
+        _notes.AppendLine(s);
+        Persist();
+    }
+
+    /// <summary>
+    /// Writes the backup so far to disk before the next removal, so nothing is lost if the app is stopped or crashes
+    /// half way: registry.reg (everything removed from the registry) and removing.txt (what was about to go).
+    /// </summary>
+    private void Persist()
+    {
+        try
+        {
+            var dir = BackupDir();
+            if (_reg is not null) File.WriteAllText(Path.Combine(dir, "registry.reg"), _reg.ToString(), Encoding.Unicode);
+            File.WriteAllText(Path.Combine(dir, "removing.txt"), "Written before each step; replaced by removed.txt when the clean-up finishes.\r\n\r\n" + _notes);
+        }
+        catch
+        {
+            /* a backup folder we can't write never stops the clean-up: the .reg text is still in memory */
+        }
+    }
 
     private StringBuilder RegText() => _reg ??= new StringBuilder("Windows Registry Editor Version 5.00\r\n\r\n");
 
@@ -372,8 +395,8 @@ public sealed class UninstallJob
     {
         using var k = Reg.Open(place);
         if (k is null) return;
-        Note($"key   {place.Text}");
         WriteKey(k, RegName(place), 0);
+        Note($"key   {place.Text}");   // saves the .reg to disk before the key is deleted
     }
 
     private void WriteKey(RegistryKey k, string name, int depth)
@@ -402,9 +425,9 @@ public sealed class UninstallJob
     {
         using var k = Reg.Open(place);
         if (k is null) return;
-        Note($"value {place.Text} → {value}");
         var b = RegText();
         b.Append('[').Append(RegName(place)).Append("]\r\n").Append(ValueLine(k, value)).Append("\r\n");
+        Note($"value {place.Text} → {value}");   // saves the .reg to disk before the value is deleted
     }
 
     private static string ValueLine(RegistryKey k, string name)
@@ -450,6 +473,15 @@ public sealed class UninstallJob
         foreach (var s in report.Steps)
             log.AppendLine($"{s.Outcome,-12} {Describe(s.Item)}{(s.Message.Length > 0 ? "  (" + s.Message + ")" : "")}");
         File.WriteAllText(Path.Combine(dir, "removed.txt"), log.ToString());
+        try
+        {
+            File.Delete(Path.Combine(dir, "removing.txt"));
+        }
+        catch
+        {
+            /* harmless */
+        }
+
         report.BackupFolder = dir;
     }
 }

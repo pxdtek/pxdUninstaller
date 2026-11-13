@@ -26,7 +26,9 @@ internal static partial class Native
 
     // ---------- Files ----------
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 1)]
+    // Natural alignment: on 64-bit Windows this structure is NOT packed (Pack = 1 is only right for 32-bit, and
+    // there it made Windows read garbage pointers and crash the app in 1.0.0).
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct SHFILEOPSTRUCT64
     {
         public IntPtr hwnd;
@@ -46,7 +48,10 @@ internal static partial class Native
     private const ushort FOF_SILENT = 0x4, FOF_NOCONFIRMATION = 0x10, FOF_ALLOWUNDO = 0x40, FOF_NOERRORUI = 0x400, FOF_NOCONFIRMMKDIR = 0x200;
 
     /// <summary>Moves a file or folder to the Recycle Bin with no windows. True when it's gone.</summary>
-    public static bool Recycle(string path)
+    public static bool Recycle(string path) => ShellDelete(path, toRecycleBin: true);
+
+    /// <summary>Deletes through the shell (the Recycle Bin when asked), no windows. The self-test uses it without the Recycle Bin.</summary>
+    public static bool ShellDelete(string path, bool toRecycleBin)
     {
         try
         {
@@ -54,7 +59,7 @@ internal static partial class Native
             {
                 wFunc = FO_DELETE,
                 pFrom = path + "\0\0",
-                fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR,
+                fFlags = (ushort)((toRecycleBin ? FOF_ALLOWUNDO : 0) | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR),
             };
             var r = SHFileOperation(ref op);
             return r == 0 && op.fAnyOperationsAborted == 0 && !File.Exists(path) && !Directory.Exists(path);
